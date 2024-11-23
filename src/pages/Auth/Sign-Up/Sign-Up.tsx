@@ -21,7 +21,6 @@ export const SignUp = () => {
     onSubmit: async (values: ISignUpForm) => {
       authApi.signup(values)
         .then((data) => {
-          console.log(data)
           toast.success("Success registration!")
           setAccessToken(data?.id)
           authStore.setIsAuth(true)

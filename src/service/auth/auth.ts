@@ -40,6 +40,17 @@ class AuthApi {
       throw new Error("User not found!");
     }
   }
+
+  getUserById = async (userId: string): Promise<any> => {
+    const userRef = doc(db, 'users', userId);
+    const userSnapshot = await getDoc(userRef);
+
+    if (userSnapshot.exists()) {
+      return { id: userSnapshot.id, ...userSnapshot.data() };
+    } else {
+      throw new Error('User not found!');
+    }
+  };
 }
 
 export const authApi = new AuthApi();
