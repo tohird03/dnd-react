@@ -1,11 +1,16 @@
 import React from "react";
 import { useFormik } from "formik";
 import { toast } from "react-toastify";
-import { ISignUpForm } from "@/types/Auth";
-import { NavLink } from "react-router-dom";
-import { ROUTES } from "@/constants/routes";
+import { useLocalStorage } from "usehooks-ts";
+import { NavLink, useNavigate } from "react-router-dom";
+import { ISignUpForm } from "../../../types/Auth";
+import { ROUTES } from "../../../constants/routes";
+import { authApi } from "../../../service/auth/auth";
+import { authStore } from "../../../store/auth";
 
 export const SignUp = () => {
+  const [, setAccessToken] = useLocalStorage<string>('accessToken', '');
+  const navigate = useNavigate()
 
   const formik = useFormik({
     initialValues: {
@@ -14,7 +19,19 @@ export const SignUp = () => {
       password: '',
     },
     onSubmit: async (values: ISignUpForm) => {
-      // Add new user from state managemant
+      authApi.signup(values)
+        .then((data) => {
+          console.log(data)
+          toast.success("Success registration!")
+          setAccessToken(data?.id)
+          authStore.setIsAuth(true)
+          authStore.setUser(data)
+          authStore.setToken(data?.id)
+          navigate(ROUTES.home)
+        })
+        .catch((err) => {
+          toast.error(err.message)
+        })
     }
   });
   return (

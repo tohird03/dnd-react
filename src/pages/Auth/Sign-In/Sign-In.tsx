@@ -1,18 +1,37 @@
-import { ROUTES } from "@/constants/routes";
-import { IAuthForm } from "@/types/Auth";
 import { useFormik } from "formik";
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { IAuthForm } from "../../../types/Auth";
+import { authApi } from "../../../service/auth/auth";
+import { ROUTES } from "../../../constants/routes";
+import { useLocalStorage } from "usehooks-ts";
+import { observer } from "mobx-react";
+import { authStore } from "../../../store/auth";
 
-export const SignIn = () => {
+export const SignIn = observer(() => {
+  const navigate = useNavigate();
+  const [, setAccessToken] = useLocalStorage<string>('accessToken', '');
+
   const formik = useFormik({
     initialValues: {
       username: '',
       password: '',
     },
     onSubmit: async (values: IAuthForm) => {
-      // Sign in from state management
+      authApi.signin(values)
+        .then((data) => {
+          console.log(data)
+          toast.success("Success login")
+          setAccessToken(data?.id)
+          authStore.setIsAuth(true)
+          authStore.setUser(data)
+          authStore.setToken(data?.id)
+          navigate(ROUTES.home)
+        })
+        .catch((err) => {
+          toast.error(err.message)
+        })
     },
   });
 
@@ -68,4 +87,4 @@ export const SignIn = () => {
       </div>
     </div>
   );
-}
+});

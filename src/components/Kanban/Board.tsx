@@ -1,140 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { updateDoc, doc } from "firebase/firestore";
+import { db } from "../../firebase/firebase";
+import { toast } from "react-toastify";
+import { ColumnCard } from "./ColumnCard";
+import { observer } from "mobx-react";
+import { authStore } from "../../store/auth";
+import { tasksStore } from "../../store/tasks";
 
-type Task = {
-  id: string;
-  content: string;
-};
+const Kanban: React.FC = observer(() => {
+  const handleTaskMove = async (taskId: string, fromColumnId: string, toColumnId: string) => {
+    const task = tasksStore.kanbanColumns
+      .find((col) => col?.id === fromColumnId)!
+      .tasks.find((t) => t?.id === taskId)!;
 
-type Column = {
-  id: string;
-  title: string;
-  tasks: Task[];
-};
+    const previousColumns = [...tasksStore.kanbanColumns];
 
-const initialColumns: Column[] = [
-  { id: "todo", title: "To Do", tasks: [{ id: "1", content: "Task 1" }, { id: "2", content: "Task 2" }] },
-  { id: "progress", title: "In Progress", tasks: [{ id: "3", content: "Task 3" }] },
-  { id: "done", title: "Done", tasks: [{ id: "4", content: "Task 4" }] },
-];
+    // UI FAST UPDATE
+    const updatedColumns = tasksStore.kanbanColumns.map((col) => {
+      if (col.id === fromColumnId) {
+        return { ...col, tasks: col.tasks.filter((task) => task.id !== taskId) }
+      } else if (col.id === toColumnId) {
+        return { ...col, tasks: [...col?.tasks, task] }
+      } else {
+        return col
+      }
+    })
+    tasksStore.setKanbanColumns(updatedColumns);
 
-const Kanban: React.FC = () => {
-  const [columns, setColumns] = useState<Column[]>(initialColumns);
-
-  const handleTaskMove = (taskId: string, fromColumnId: string, toColumnId: string, toIndex: number) => {
-    const fromColumn = columns.find((col) => col.id === fromColumnId)!;
-    const toColumn = columns.find((col) => col.id === toColumnId)!;
-
-    const task = fromColumn.tasks.find((t) => t.id === taskId)!;
-
-    const updatedFromTasks = fromColumn.tasks.filter((t) => t.id !== taskId);
-    const updatedToTasks = [...toColumn.tasks.slice(0, toIndex), task, ...toColumn.tasks.slice(toIndex)];
-
-    setColumns((prev) =>
-      prev.map((col) => {
-        if (col.id === fromColumnId) return { ...col, tasks: updatedFromTasks };
-        if (col.id === toColumnId) return { ...col, tasks: updatedToTasks };
-        return col;
-      })
-    );
+    // FIREBASE UPDATE
+    try {
+      const taskRef = doc(db, "tasks", taskId);
+      await updateDoc(taskRef, { status: toColumnId });
+    } catch (err) {
+      // IF SMTH ERROR TASK BACK OLD STATUS
+      toast.error('Update error')
+      tasksStore.setKanbanColumns(previousColumns);
+    }
   };
+
+  // GET ALL TASKS
+  useEffect(() => {
+    if(authStore?.token) {
+      tasksStore.getTasks(authStore?.token);
+    }
+  }, [authStore?.token]);
 
   return (
     <DndProvider backend={HTML5Backend}>
       <div style={{ display: "flex", gap: "16px" }}>
-        {columns.map((column) => (
-          <Column key={column.id} column={column} onTaskMove={handleTaskMove} />
+        {tasksStore.kanbanColumns?.map((column) => (
+          <ColumnCard key={column.id} column={column} onTaskMove={handleTaskMove} />
         ))}
       </div>
     </DndProvider>
   );
-};
-
-type ColumnProps = {
-  column: Column;
-  onTaskMove: (taskId: string, fromColumnId: string, toColumnId: string, toIndex: number) => void;
-};
-
-const Column: React.FC<ColumnProps> = ({ column, onTaskMove }) => {
-  const [, dropRef] = useDrop({
-    accept: "TASK",
-    drop: (item: { id: string; fromColumnId: string }) => {
-      if (item.fromColumnId !== column.id) {
-        onTaskMove(item.id, item.fromColumnId, column.id, column.tasks.length);
-      }
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-      canDrop: monitor.canDrop()
-    }),
-  });
-
-  return (
-    <div
-      ref={dropRef}
-      style={{
-        background: "#f4f4f4",
-        padding: "8px",
-        width: "250px",
-        minHeight: "500px",
-        borderRadius: "8px",
-        border: "1px solid #ddd",
-      }}
-    >
-      <h2>{column.title}</h2>
-      {column.tasks.map((task, index) => (
-        <Task
-          key={task.id}
-          task={task}
-          fromColumnId={column.id}
-          index={index}
-          onTaskMove={onTaskMove}
-        />
-      ))}
-    </div>
-  );
-};
-
-type TaskProps = {
-  task: Task;
-  fromColumnId: string;
-  index: number;
-  onTaskMove: (
-    taskId: string,
-    fromColumnId: string,
-    toColumnId: string,
-    toIndex: number
-  ) => void;
-};
-
-const Task: React.FC<TaskProps> = ({ task, fromColumnId }) => {
-  const [, dragRef] = useDrag({
-    type: "TASK",
-    item: { id: task.id, fromColumnId },
-  });
-
-  const handleDelete = (event: React.MouseEvent) => {
-    event.stopPropagation();
-  };
-
-  return (
-    <div
-      ref={dragRef}
-      style={{
-        padding: "8px",
-        margin: "0 0 8px 0",
-        background: "#fff",
-        border: "1px solid #ddd",
-        borderRadius: "4px",
-        cursor: "grab",
-      }}
-    >
-      {task.content}
-
-      <button onClick={handleDelete}>Delete</button>
-    </div>
-  );
-};
+})
 
 export default Kanban;

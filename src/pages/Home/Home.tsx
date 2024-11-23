@@ -1,4 +1,4 @@
-import Kanban from '@/components/Kanban/Board';
+import Kanban from '../../components/Kanban/Board';
 import React from 'react';
 
 export const Home = () => {

@@ -8,3 +8,7 @@ export interface IAuthForm {
   username: string,
   password: string,
 }
+
+export interface IUser extends ISignUpForm {
+  id: string
+}
