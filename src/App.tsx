@@ -1,24 +1,49 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from "react";
+import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
+import Kanban from "./components/Kanban/Board";
+
+const columnData = [
+  {
+    id: 'todo',
+    text: 'Todo'
+  },
+  {
+    id: 'progress',
+    text: 'Progress'
+  },
+  {
+    id: 'done',
+    text: 'Done'
+  },
+];
+
+const data = [
+  {
+    id: '1',
+    col_id: 'todo',
+    text: 'Salom 1'
+  },
+  {
+    id: '2',
+    col_id: 'todo',
+    text: 'Salom 2'
+  },
+  {
+    id: '3',
+    col_id: 'todo',
+    text: 'Salom 3'
+  },
+  {
+    id: '4',
+    col_id: 'progress',
+    text: 'Salom 4'
+  },
+]
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div style={{ display: "flex", justifyContent: "center", height: "100%", gap: '40px' }}>
+      <Kanban />
     </div>
   );
 }
